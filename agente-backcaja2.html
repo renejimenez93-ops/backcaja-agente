@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Asistente BackCaja</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f0f4f8;
+    --surface: #ffffff;
+    --surface2: #f7f9fc;
+    --border: #e2e8f0;
+    --accent: #0057b8;
+    --accent-light: #e8f0fb;
+    --accent2: #00a86b;
+    --accent2-light: #e6f7f1;
+    --text: #1a2332;
+    --text-muted: #64748b;
+    --bot-bubble: #ffffff;
+    --user-bubble: #0057b8;
+    --shadow: 0 2px 12px rgba(0,0,0,0.08);
+    --shadow-lg: 0 8px 32px rgba(0,0,0,0.12);
+    --radius: 16px;
+    --radius-sm: 10px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+
+  .app-shell {
+    width: 100%;
+    max-width: 620px;
+    background: var(--surface);
+    border-radius: 24px;
+    box-shadow: var(--shadow-lg);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    height: 92vh;
+    max-height: 820px;
+    border: 1px solid var(--border);
+  }
+
+  .header {
+    background: var(--accent);
+    padding: 18px 24px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-shrink: 0;
+  }
+  .header-avatar {
+    width: 42px; height: 42px;
+    background: rgba(255,255,255,0.18);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px; flex-shrink: 0;
+  }
+  .header-info h1 { color:#fff; font-size:15px; font-weight:600; letter-spacing:-0.01em; }
+  .header-info p  { color:rgba(255,255,255,0.72); font-size:12px; margin-top:2px; }
+  .header-badge {
+    margin-left:auto; background:var(--accent2); color:#fff;
+    font-size:11px; font-weight:600; padding:4px 10px; border-radius:20px;
+  }
+
+  .chat-area {
+    flex:1; overflow-y:auto; padding:24px 20px;
+    display:flex; flex-direction:column; gap:16px;
+    background:var(--surface2); scroll-behavior:smooth;
+  }
+  .chat-area::-webkit-scrollbar { width:4px; }
+  .chat-area::-webkit-scrollbar-thumb { background:var(--border); border-radius:4px; }
+
+  .msg-row { display:flex; gap:10px; animation:fadeUp 0.3s ease; }
+  .msg-row.bot { align-items:flex-start; }
+  .msg-row.user { flex-direction:row-reverse; }
+
+  @keyframes fadeUp {
+    from { opacity:0; transform:translateY(10px); }
+    to   { opacity:1; transform:translateY(0); }
+  }
+
+  .bot-icon {
+    width:32px; height:32px; background:var(--accent);
+    border-radius:50%; display:flex; align-items:center; justify-content:center;
+    font-size:16px; flex-shrink:0; margin-top:2px;
+  }
+
+  .bubble {
+    max-width:82%; padding:12px 16px;
+    border-radius:var(--radius); font-size:14px; line-height:1.6;
+  }
+  .bubble.bot {
+    background:var(--bot-bubble); color:var(--text);
+    border:1px solid var(--border); border-top-left-radius:4px;
+    box-shadow:var(--shadow);
+  }
+  .bubble.user { background:var(--user-bubble); color:#fff; border-top-right-radius:4px; }
+
+  .result-card {
+    margin-top:12px; background:var(--accent2-light);
+    border:1px solid #a7e3ca; border-radius:var(--radius-sm); padding:12px 14px;
+  }
+  .result-card .label {
+    font-size:11px; font-weight:600; color:var(--accent2);
+    text-transform:uppercase; letter-spacing:0.06em; margin-bottom:6px;
+  }
+  .result-card .cat-main { font-size:13px; font-weight:600; color:#0a4a30; margin-bottom:2px; }
+  .result-card .cat-sub  { font-size:13px; color:#1a5c3a; }
+  .result-card .cat-code {
+    font-family:'DM Mono',monospace; font-weight:600;
+    color:var(--accent); background:var(--accent-light);
+    padding:1px 6px; border-radius:4px; margin-right:6px;
+  }
+
+  .warning-box {
+    margin-top:10px; background:#fff8e6;
+    border-left:3px solid #f5a623; padding:8px 12px;
+    border-radius:0 6px 6px 0; font-size:13px; color:#7a5000;
+  }
+
+  .cta-btn {
+    display:inline-flex; align-items:center; gap:6px;
+    margin-top:12px; background:var(--accent); color:#fff;
+    border:none; padding:9px 16px; border-radius:8px;
+    font-size:13px; font-weight:600; cursor:pointer;
+    text-decoration:none; transition:background 0.2s;
+    font-family:'DM Sans',sans-serif;
+  }
+  .cta-btn:hover { background:#0046a0; }
+
+  .horario-chip {
+    display:inline-flex; align-items:center; gap:5px;
+    background:#fff8e6; border:1px solid #f5d485;
+    border-radius:20px; padding:4px 10px;
+    font-size:11.5px; color:#7a5000; margin-top:8px;
+  }
+
+  .typing-indicator { display:flex; align-items:center; gap:10px; animation:fadeUp 0.3s ease; }
+  .typing-dots {
+    background:var(--bot-bubble); border:1px solid var(--border);
+    border-radius:var(--radius); border-top-left-radius:4px;
+    padding:14px 18px; display:flex; gap:5px; align-items:center;
+  }
+  .typing-dots span {
+    width:7px; height:7px; background:var(--text-muted);
+    border-radius:50%; animation:bounce 1.2s infinite;
+  }
+  .typing-dots span:nth-child(2) { animation-delay:0.2s; }
+  .typing-dots span:nth-child(3) { animation-delay:0.4s; }
+  @keyframes bounce {
+    0%,60%,100% { transform:translateY(0); }
+    30% { transform:translateY(-6px); }
+  }
+
+  .options-row {
+    display:flex; flex-direction:column; gap:8px;
+    margin-top:4px; animation:fadeUp 0.35s ease; padding-left:42px;
+  }
+  .opt-btn {
+    background:var(--surface); border:1.5px solid var(--border);
+    border-radius:var(--radius-sm); padding:11px 16px;
+    font-family:'DM Sans',sans-serif; font-size:13.5px;
+    color:var(--text); cursor:pointer; text-align:left;
+    transition:all 0.18s ease; display:flex; align-items:center;
+    gap:10px; line-height:1.4;
+  }
+  .opt-btn:hover {
+    border-color:var(--accent); background:var(--accent-light);
+    color:var(--accent); transform:translateX(3px);
+  }
+  .opt-btn .opt-icon { font-size:16px; flex-shrink:0; }
+
+  .input-area {
+    padding:14px 20px; background:var(--surface);
+    border-top:1px solid var(--border);
+    display:flex; gap:10px; align-items:flex-end; flex-shrink:0;
+  }
+  .input-area textarea {
+    flex:1; border:1.5px solid var(--border); border-radius:var(--radius-sm);
+    padding:10px 14px; font-family:'DM Sans',sans-serif; font-size:14px;
+    color:var(--text); resize:none; outline:none; background:var(--surface2);
+    min-height:42px; max-height:100px; line-height:1.5; transition:border-color 0.2s;
+  }
+  .input-area textarea:focus { border-color:var(--accent); }
+  .input-area textarea::placeholder { color:var(--text-muted); }
+
+  .send-btn {
+    width:42px; height:42px; background:var(--accent); border:none;
+    border-radius:var(--radius-sm); cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    flex-shrink:0; transition:background 0.2s,transform 0.1s; color:#fff;
+  }
+  .send-btn:hover { background:#0046a0; }
+  .send-btn:active { transform:scale(0.95); }
+  .send-btn svg { width:18px; height:18px; }
+
+  .restart-btn {
+    background:none; border:none; color:var(--text-muted); cursor:pointer;
+    font-family:'DM Sans',sans-serif; font-size:12px;
+    padding:4px 8px; border-radius:6px;
+    display:flex; align-items:center; gap:4px;
+    transition:color 0.2s; flex-shrink:0;
+  }
+  .restart-btn:hover { color:var(--accent); }
+</style>
+</head>
+<body>
+
+<div class="app-shell">
+  <div class="header">
+    <div class="header-avatar">🏦</div>
+    <div class="header-info">
+      <h1>Asistente BackCaja</h1>
+      <p>Te ayudo a identificar tu solicitud</p>
+    </div>
+    <div class="header-badge">Tesorería</div>
+  </div>
+  <div class="chat-area" id="chatArea"></div>
+  <div class="input-area">
+    <button class="restart-btn" onclick="restartChat()">↺ Reiniciar</button>
+    <textarea id="userInput" placeholder="Escribe tu consulta aquí..." rows="1"
+      onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+    <button class="send-btn" onclick="sendMessage()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+        stroke-linecap="round" stroke-linejoin="round">
+        <line x1="22" y1="2" x2="11" y2="13"></line>
+        <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+      </svg>
+    </button>
+  </div>
+</div>
+
+<script>
+// ──────────────────────────────────────────────────────────────────
+// ÁRBOL DE DECISIÓN — toda la lógica vive aquí, sin llamadas externas
+// ──────────────────────────────────────────────────────────────────
+const FORM_URL = "https://forms.office.com/r/mNiTLFavxd";
+
+// Cada nodo: { msg, options: [{label, icon, next}] }
+// Nodos hoja: { msg, result: {cat, code, sub}, warning? }
+const TREE = {
+
+  // ── INICIO ──────────────────────────────────────────────────────
+  start: {
+    msg: `¡Hola! 👋 Soy el <strong>Asistente de BackCaja</strong>.<br><br>
+Estoy aquí para ayudarte a identificar exactamente <strong>qué opción seleccionar</strong> en el formulario según tu situación.<br><br>
+<strong>¿Qué necesitas hacer hoy?</strong>
+<div class="horario-chip">🕐 Atención Lun–Jue 08:30–18:00 · Vie 08:30–14:00</div>`,
+    options: [
+      { icon:"🖥️", label:"Problemas con mi caja o acceso al sistema", next:"asignacion" },
+      { icon:"💳", label:"Anular o devolver un pago con tarjeta (Transbank)", next:"transbank" },
+      { icon:"🔄", label:"Cambiar forma de pago o anular una transacción", next:"camb_estado" },
+      { icon:"🔒", label:"Cerrar, abrir o arquear mi caja", next:"cierre" },
+      { icon:"🖨️", label:"Detener un pago o reimprimir un documento", next:"detencion" },
+      { icon:"⚠️", label:"Tengo un error o incidente en el sistema", next:"incidentes" },
+      { icon:"💬", label:"Necesito orientación o consulta de pagos", next:"orientacion" },
+      { icon:"📋", label:"Gestionar una planilla de cotización", next:"planillas" },
+      { icon:"📅", label:"Prorrogar o rescatar un cheque a fecha", next:"cheques" },
+    ]
+  },
+
+  // ── ASIGNACIÓN ──────────────────────────────────────────────────
+  asignacion: {
+    msg: "Entendido. ¿Qué necesitas hacer exactamente?",
+    options: [
+      { icon:"🖥️", label:"Necesito que me asignen una caja", next:"r_a01" },
+      { icon:"💳", label:"Necesito asignar o asociar un voucher de tarjeta TC/TD", next:"r_a02" },
+      { icon:"⏸️", label:"Necesito quedar en fila (dejar en espera)", next:"r_a03" },
+      { icon:"❌", label:"Necesito eliminarme de la fila", next:"r_a04" },
+      { icon:"👤", label:"Necesito crear un nuevo cajero en el sistema", next:"r_a05" },
+    ]
+  },
+  r_a01: { msg:"Perfecto, ya identifiqué tu solicitud.", result:{ cat:"Asignación (Caja o Voucher) y Gestión de Fila", code:"A01", sub:"Asignar Caja" } },
+  r_a02: { msg:"Perfecto, ya identifiqué tu solicitud.", result:{ cat:"Asignación (Caja o Voucher) y Gestión de Fila", code:"A02", sub:"Asignar/Asociar voucher tarjeta TC-TD" } },
+  r_a03: { msg:"Perfecto, ya identifiqué tu solicitud.", result:{ cat:"Asignación (Caja o Voucher) y Gestión de Fila", code:"A03", sub:"Dejar en Fila" } },
+  r_a04: { msg:"Perfecto, ya identifiqué tu solicitud.", result:{ cat:"Asignación (Caja o Voucher) y Gestión de Fila", code:"A04", sub:"Eliminar de fila" } },
+  r_a05: { msg:"Perfecto, ya identifiqué tu solicitud.", result:{ cat:"Asignación (Caja o Voucher) y Gestión de Fila", code:"A05", sub:"Crear Cajero" } },
+
+  // ── TRANSBANK ───────────────────────────────────────────────────
+  transbank: {
+    msg: "¿Qué tipo de operación Transbank necesitas gestionar?",
+    options: [
+      { icon:"💳", label:"Anular un pago con Tarjeta de Crédito", next:"r_h01" },
+      { icon:"💳", label:"Devolver un pago con Tarjeta de Débito", next:"r_h02" },
+    ]
+  },
+  r_h01: { msg:"Perfecto, ya identifiqué tu solicitud.", result:{ cat:"Anulación TC - Devolución TD [Transbank]", code:"H01", sub:"Anulación Tarjeta de Crédito" } },
+  r_h02: { msg:"Perfecto, ya identifiqué tu solicitud.", result:{ cat:"Anulación TC - Devolución TD [Transbank]", code:"H02", sub:"Devolución Tarjeta de Débito" } },
+
+  // ── CAMBIO ESTADO ───────────────────────────────────────────────
+  camb_estado: {
+    msg: "¿Qué acción necesitas realizar sobre la transacción o el pago?",
+    options: [
+      { icon:"↩️", label:"Anular, revertir o devolver una transacción ya procesada", next:"r_b01" },
+      { icon:"🔄", label:"Cambiar la forma de pago (Camb Estado)", next:"r_b02" },
+      { icon:"🏢", label:"Cambiar el reembolso a empresa", next:"r_b03" },
+    ]
+  },
+  r_b01: { msg:"Perfecto, ya identifiqué tu solicitud.", result:{ cat:"Cambio forma de pago (Camb Estado) y Anulaciones/Reversas", code:"B01", sub:"Anulación/Reversa/Devolución Transacción" } },
+  r_b02: { msg:"Perfecto, ya identifiqué tu solicitud.", result:{ cat:"Cambio forma de pago (Camb Estado) y Anulaciones/Reversas", code:"B02", sub:"Cambio forma de pago (Camb Estado)" } },
+  r_b03: { msg:"Perfecto, ya identifiqué tu solicitud.", result:{ cat:"Cambio forma de pago (Camb Estado) y Anulaciones/Reversas", code:"B03", sub:"Cambio reembolso empresa" } },
+
+  // ── CIERRE ──────────────────────────────────────────────────────
+  cierre: {
+    msg: "¿Qué gestión de caja necesitas?",
+    options: [
+      { icon:"📊", label:"Hacer un arqueo de caja", next:"r_c01" },
+      { icon:"🔒", label:"Cerrar o abrir mi caja", next:"r_c02" },
+    ]
+  },
+  r_c01: { msg:"Perfecto, ya identifiqué tu solicitud.", result:{ cat:"Cierre/Abrir/Arqueo de caja", code:"C01", sub:"Arqueo Caja" } },
+  r_c02: { msg:"Perfecto, ya identifiqué tu solicitud.", result:{ cat:"Cierre/Abrir/Arqueo de caja", code:"C02", sub:"Cerrar/Abrir Caja" } },
+
+  // ── DETENCIÓN ───────────────────────────────────────────────────
+  detencion: {
+    msg: "¿Qué necesitas hacer?",
+    options: [
+      { icon:"⛔", label:"Detener un pago que está en proceso", next:"r_d01" },
+      { icon:"🖨️", label:"Reimprimir un comprobante, CIC, bono u otro documento", next:"r_d02" },
+    ]
+  },
+  r_d01: { msg:"Perfecto, ya identifiqué tu solicitud.", result:{ cat:"Detención de pagos y reimpresiones", code:"D01", sub:"Detención de pagos" } },
+  r_d02: { msg:"Perfecto, ya identifiqué tu solicitud.", result:{ cat:"Detención de pagos y reimpresiones", code:"D02", sub:"Reimprimir Comprobante, CIC, Bono, etc." } },
+
+  // ── INCIDENTES ──────────────────────────────────────────────────
+  incidentes: {
+    msg: "¿Qué tipo de incidente o error tienes?",
+    options: [
+      { icon:"📄", label:"Se generó un bono duplicado", next:"r_e01" },
+      { icon:"💸", label:"Error en pagos múltiples", next:"r_e03" },
+      { icon:"🔧", label:"Otro incidente o error no listado", next:"r_e02" },
+    ]
+  },
+  r_e01: { msg:"Perfecto, ya identifiqué tu solicitud.", result:{ cat:"Incidentes/Errores", code:"E01", sub:"Incidente: Duplicidad de bono" } },
+  r_e02: { msg:"Perfecto, ya identifiqué tu solicitud.", result:{ cat:"Incidentes/Errores", code:"E02", sub:"Incidentes Varios" } },
+  r_e03: { msg:"Perfecto, ya identifiqué tu solicitud.", result:{ cat:"Incidentes/Errores", code:"E03", sub:"Error pagos múltiples" } },
+
+  // ── ORIENTACIÓN ─────────────────────────────────────────────────
+  orientacion: {
+    msg: "¿Sobre qué necesitas orientación o soporte?",
+    options: [
+      { icon:"👤", label:"Consulta o requerimiento de pago de un afiliado o beneficiario", next:"r_f02" },
+      { icon:"💬", label:"Orientación general o soporte de especialistas", next:"r_f03" },
+    ]
+  },
+  r_f02: { msg:"Perfecto, ya identifiqué tu solicitud.", result:{ cat:"Orientación y soporte (Atención de Especialistas)", code:"F02", sub:"Consulta/Requerimiento pago Afiliado/Beneficiario" } },
+  r_f03: { msg:"Perfecto, ya identifiqué tu solicitud.", result:{ cat:"Orientación y soporte (Atención de Especialistas)", code:"F03", sub:"Orientación y soporte (Atención de Especialistas)" } },
+
+  // ── PLANILLAS ───────────────────────────────────────────────────
+  planillas: {
+    msg: "¿Qué necesitas hacer con la planilla?",
+    options: [
+      { icon:"🗑️", label:"Eliminar una planilla de cotización", next:"r_g01" },
+      { icon:"💰", label:"Pagar una planilla", next:"r_g02" },
+    ]
+  },
+  r_g01: { msg:"Perfecto, ya identifiqué tu solicitud.", result:{ cat:"Planillas de cotización", code:"G01", sub:"Eliminar planilla cotización" } },
+  r_g02: { msg:"Perfecto, ya identifiqué tu solicitud.", result:{ cat:"Planillas de cotización", code:"G02", sub:"Pagar Planilla" } },
+
+  // ── CHEQUES ─────────────────────────────────────────────────────
+  cheques: {
+    msg: "¿Qué necesitas hacer con el cheque a fecha?",
+    options: [
+      { icon:"📅", label:"Prorrogar un cheque (extender su fecha de vencimiento)", next:"r_i01" },
+      { icon:"💵", label:"Rescatar un cheque (cobrar antes del vencimiento)", next:"r_i02" },
+    ]
+  },
+  r_i01: {
+    msg:"Perfecto, ya identifiqué tu solicitud.",
+    result:{ cat:"Prórroga y Rescate de cheques a fecha", code:"I01", sub:"Prórroga de cheques a fecha" },
+    warning:`<strong>Requisitos obligatorios antes de subir el ticket:</strong><br>
+• La solicitud debe hacerse con al menos <strong>48 horas antes del vencimiento</strong>.<br>
+• El cliente <strong>no debe tener protestos</strong> pendientes.<br>
+• Si el cheque es de <strong>Cotizaciones</strong> → requiere autorización del <strong>Supervisor de Cobranzas</strong>.<br>
+• Si el cheque es <strong>PAM</strong> → requiere autorización del <strong>Jefe de Oficina</strong>.`
+  },
+  r_i02: {
+    msg:"Perfecto, ya identifiqué tu solicitud.",
+    result:{ cat:"Prórroga y Rescate de cheques a fecha", code:"I02", sub:"Rescate cheques a fecha" },
+    warning:`<strong>Requisitos obligatorios antes de subir el ticket:</strong><br>
+• La solicitud debe hacerse con al menos <strong>48 horas antes del vencimiento</strong>.<br>
+• El cliente <strong>no debe tener protestos</strong> pendientes.<br>
+• Si el cheque es de <strong>Cotizaciones</strong> → requiere autorización del <strong>Supervisor de Cobranzas</strong>.<br>
+• Si el cheque es <strong>PAM</strong> → requiere autorización del <strong>Jefe de Oficina</strong>.`
+  },
+};
+
+// ──────────────────────────────────────────────────────────────────
+// MOTOR DE CONVERSACIÓN
+// ──────────────────────────────────────────────────────────────────
+let currentNode = "start";
+
+function goTo(nodeId) {
+  currentNode = nodeId;
+  const node = TREE[nodeId];
+  if (!node) return;
+
+  // Pequeño delay para simular naturalidad
+  setTimeout(() => {
+    removeTyping();
+
+    if (node.result) {
+      // Nodo hoja: mostrar resultado
+      showResult(node);
+    } else {
+      // Nodo intermedio: mostrar mensaje + opciones
+      addBotMessage(node.msg);
+      showOptions(node.options);
+    }
+  }, 420);
+
+  showTyping();
+}
+
+function showResult(node) {
+  const { cat, code, sub } = node.result;
+  const warning = node.warning || null;
+
+  let html = `${node.msg}<div class="result-card">
+    <div class="label">✅ Categoría identificada</div>
+    <div class="cat-main">${cat}</div>
+    <div class="cat-sub" style="margin-top:4px"><span class="cat-code">${code}</span>${sub}</div>
+  </div>`;
+
+  if (warning) {
+    html += `<div class="warning-box">⚠️ ${warning}</div>`;
+  }
+
+  html += `<br>En el formulario selecciona:<br>
+  <strong>1.</strong> Problemática → <em>${cat}</em><br>
+  <strong>2.</strong> Sub-opción → <em><span style="font-family:'DM Mono',monospace;color:var(--accent)">${code}</span> – ${sub}</em>`;
+
+  addBotMessage(html);
+
+  // Botón al formulario
+  setTimeout(() => {
+    const chat = document.getElementById('chatArea');
+    const row = document.createElement('div');
+    row.className = 'msg-row bot';
+    row.style.paddingLeft = '42px';
+    row.innerHTML = `<a href="${FORM_URL}" target="_blank" class="cta-btn">📋 Ir al formulario de solicitud</a>`;
+    chat.appendChild(row);
+    scrollBottom();
+  }, 100);
+
+  // Opción de reiniciar
+  setTimeout(() => {
+    showOptions([
+      { icon:"🔄", label:"Tengo otra solicitud diferente", next:"start" },
+    ]);
+  }, 200);
+}
+
+// ──────────────────────────────────────────────────────────────────
+// UI HELPERS
+// ──────────────────────────────────────────────────────────────────
+function addBotMessage(html) {
+  const chat = document.getElementById('chatArea');
+  const row = document.createElement('div');
+  row.className = 'msg-row bot';
+  row.innerHTML = `<div class="bot-icon">🤖</div><div class="bubble bot">${html}</div>`;
+  chat.appendChild(row);
+  scrollBottom();
+}
+
+function addUserMessage(text) {
+  const chat = document.getElementById('chatArea');
+  const row = document.createElement('div');
+  row.className = 'msg-row user';
+  row.innerHTML = `<div class="bubble user">${escapeHtml(text)}</div>`;
+  chat.appendChild(row);
+  scrollBottom();
+}
+
+function showTyping() {
+  const chat = document.getElementById('chatArea');
+  const el = document.createElement('div');
+  el.className = 'typing-indicator'; el.id = 'typingIndicator';
+  el.innerHTML = `<div class="bot-icon">🤖</div>
+    <div class="typing-dots"><span></span><span></span><span></span></div>`;
+  chat.appendChild(el);
+  scrollBottom();
+}
+
+function removeTyping() {
+  const el = document.getElementById('typingIndicator');
+  if (el) el.remove();
+}
+
+function showOptions(options) {
+  const chat = document.getElementById('chatArea');
+  const container = document.createElement('div');
+  container.className = 'options-row';
+  container.id = 'optionsContainer';
+  options.forEach(opt => {
+    const btn = document.createElement('button');
+    btn.className = 'opt-btn';
+    btn.innerHTML = `<span class="opt-icon">${opt.icon}</span>${opt.label}`;
+    btn.onclick = () => {
+      container.remove();
+      addUserMessage(opt.label);
+      goTo(opt.next);
+    };
+    container.appendChild(btn);
+  });
+  chat.appendChild(container);
+  scrollBottom();
+}
+
+function removeOptions() {
+  const el = document.getElementById('optionsContainer');
+  if (el) el.remove();
+}
+
+// Búsqueda por texto libre — mapea palabras clave a nodos
+function findNodeByText(text) {
+  const t = text.toLowerCase();
+  const keywords = [
+    { keys:["asign","caja","voucher","fila","cajero","crear"], node:"asignacion" },
+    { keys:["transbank","crédito","credito","débito","debito","anul","devoluc"], node:"transbank" },
+    { keys:["cambio","forma de pago","reversa","reembolso","estado"], node:"camb_estado" },
+    { keys:["cierre","cerrar","abrir","arqueo"], node:"cierre" },
+    { keys:["detenci","reimprimir","reimprim","comprobante","bono","cic"], node:"detencion" },
+    { keys:["error","incidente","duplicad","múltiple","multiple"], node:"incidentes" },
+    { keys:["orientaci","consulta","afiliado","beneficiario","soporte"], node:"orientacion" },
+    { keys:["planilla","cotizaci"], node:"planillas" },
+    { keys:["cheque","prórroga","prorroga","rescate","fecha"], node:"cheques" },
+  ];
+  for (const { keys, node } of keywords) {
+    if (keys.some(k => t.includes(k))) return node;
+  }
+  return null;
+}
+
+function sendMessage() {
+  const input = document.getElementById('userInput');
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+  autoResize(input);
+  removeOptions();
+  addUserMessage(text);
+
+  const node = findNodeByText(text);
+  if (node) {
+    goTo(node);
+  } else {
+    showTyping();
+    setTimeout(() => {
+      removeTyping();
+      addBotMessage("No pude identificar tu consulta automáticamente. Por favor selecciona la opción que más se acerca a tu situación:");
+      goTo("start");
+    }, 500);
+  }
+}
+
+function handleKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+}
+
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 100) + 'px';
+}
+
+function restartChat() {
+  document.getElementById('chatArea').innerHTML = '';
+  currentNode = 'start';
+  goTo('start');
+}
+
+function scrollBottom() {
+  const chat = document.getElementById('chatArea');
+  setTimeout(() => { chat.scrollTop = chat.scrollHeight; }, 60);
+}
+
+function escapeHtml(text) {
+  return text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ── ARRANCAR ──
+goTo('start');
+</script>
+</body>
+</html>
