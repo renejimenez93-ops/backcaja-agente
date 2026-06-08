@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Asistente BackCaja</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f0f4f8;
+    --surface: #ffffff;
+    --surface2: #f7f9fc;
+    --border: #e2e8f0;
+    --accent: #007A6E;
+    --accent-dark: #005f55;
+    --accent-light: #e0f5f3;
+    --accent2: #F5A623;
+    --accent2-light: #fff8e6;
+    --text: #1a2332;
+    --text-muted: #64748b;
+    --bot-bubble: #ffffff;
+    --user-bubble: #007A6E;
+    --shadow: 0 2px 12px rgba(0,0,0,0.07);
+    --shadow-lg: 0 8px 32px rgba(0,0,0,0.11);
+    --radius: 16px;
+    --radius-sm: 10px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .app-shell {
+    width: 100%;
+    max-width: 640px;
+    background: var(--surface);
+    border-radius: 24px;
+    box-shadow: var(--shadow-lg);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    height: 94vh;
+    max-height: 860px;
+    border: 1px solid var(--border);
+  }
+  .header {
+    background: var(--accent);
+    padding: 16px 22px;
+    display: flex;
+    align-items: center;
+    gap: 13px;
+    flex-shrink: 0;
+  }
+  .header-avatar {
+    width: 40px; height: 40px;
+    background: rgba(255,255,255,0.18);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 19px; flex-shrink: 0;
+  }
+  .header-info h1 { color:#fff; font-size:14px; font-weight:600; }
+  .header-info p  { color:rgba(255,255,255,0.70); font-size:11.5px; margin-top:1px; }
+  .header-badge {
+    margin-left:auto;
+    background: var(--accent2);
+    color:#fff; font-size:11px; font-weight:600;
+    padding:3px 10px; border-radius:20px;
+  }
+  .chat-area {
+    flex:1; overflow-y:auto; padding:20px 18px;
+    display:flex; flex-direction:column; gap:14px;
+    background:var(--surface2); scroll-behavior:smooth;
+  }
+  .chat-area::-webkit-scrollbar { width:4px; }
+  .chat-area::-webkit-scrollbar-thumb { background:var(--border); border-radius:4px; }
+
+  .msg-row { display:flex; gap:9px; animation:fadeUp 0.28s ease; }
+  .msg-row.bot { align-items:flex-start; }
+  .msg-row.user { flex-direction:row-reverse; }
+  @keyframes fadeUp {
+    from { opacity:0; transform:translateY(8px); }
+    to   { opacity:1; transform:translateY(0); }
+  }
+  .bot-icon {
+    width:30px; height:30px; background:var(--accent);
+    border-radius:50%; display:flex; align-items:center; justify-content:center;
+    font-size:15px; flex-shrink:0; margin-top:2px;
+  }
+  .bubble {
+    max-width:83%; padding:11px 15px;
+    border-radius:var(--radius); font-size:13.5px; line-height:1.62;
+  }
+  .bubble.bot {
+    background:var(--bot-bubble); color:var(--text);
+    border:1px solid var(--border); border-top-left-radius:4px;
+    box-shadow:var(--shadow);
+  }
+  .bubble.user { background:var(--user-bubble); color:#fff; border-top-right-radius:4px; }
+
+  /* Result card */
+  .result-card {
+    margin-top:11px; background:var(--accent-light);
+    border:1.5px solid #9fd6d1; border-radius:var(--radius-sm); padding:11px 13px;
+  }
+  .result-card .rc-label {
+    font-size:10.5px; font-weight:600; color:var(--accent);
+    text-transform:uppercase; letter-spacing:0.07em; margin-bottom:5px;
+  }
+  .result-card .rc-cat { font-size:13px; font-weight:600; color:#004d44; margin-bottom:3px; }
+  .result-card .rc-sub { font-size:13px; color:#005f55; }
+  .rc-code {
+    font-family:'DM Mono',monospace; font-weight:600;
+    color:var(--accent); background:#fff;
+    padding:1px 7px; border-radius:5px; margin-right:6px;
+    border:1px solid #9fd6d1;
+  }
+
+  /* Data tips */
+  .data-tips {
+    margin-top:10px; background:#fffbf0;
+    border-left:3px solid var(--accent2);
+    padding:9px 12px; border-radius:0 7px 7px 0;
+    font-size:12.5px; color:#6b4c00;
+  }
+  .data-tips strong { display:block; margin-bottom:4px; font-size:12px; color:#8a6000; }
+  .data-tips ul { padding-left:16px; margin:0; }
+  .data-tips li { margin-bottom:2px; }
+
+  /* Warning box */
+  .warning-box {
+    margin-top:9px; background:#fff8e6;
+    border-left:3px solid var(--accent2); padding:8px 12px;
+    border-radius:0 6px 6px 0; font-size:12.5px; color:#7a5000;
+  }
+
+  /* Info box */
+  .info-box {
+    margin-top:9px; background:#f0f8ff;
+    border-left:3px solid #5b9bd5; padding:8px 12px;
+    border-radius:0 6px 6px 0; font-size:12.5px; color:#1a4a70;
+  }
+
+  /* CTA button */
+  .cta-btn {
+    display:inline-flex; align-items:center; gap:6px;
+    margin-top:11px; background:var(--accent); color:#fff;
+    border:none; padding:9px 16px; border-radius:8px;
+    font-size:13px; font-weight:600; cursor:pointer;
+    text-decoration:none; transition:background 0.2s;
+    font-family:'DM Sans',sans-serif;
+  }
+  .cta-btn:hover { background:var(--accent-dark); }
+
+  .horario-chip {
+    display:inline-flex; align-items:center; gap:5px;
+    background:#fff8e6; border:1px solid #f5d485;
+    border-radius:20px; padding:4px 10px;
+    font-size:11px; color:#7a5000; margin-top:8px;
+  }
+
+  /* Typing */
+  .typing-indicator { display:flex; align-items:center; gap:9px; animation:fadeUp 0.28s ease; }
+  .typing-dots {
+    background:var(--bot-bubble); border:1px solid var(--border);
+    border-radius:var(--radius); border-top-left-radius:4px;
+    padding:13px 17px; display:flex; gap:5px; align-items:center;
+  }
+  .typing-dots span {
+    width:6px; height:6px; background:var(--text-muted);
+    border-radius:50%; animation:bounce 1.2s infinite;
+  }
+  .typing-dots span:nth-child(2) { animation-delay:0.2s; }
+  .typing-dots span:nth-child(3) { animation-delay:0.4s; }
+  @keyframes bounce {
+    0%,60%,100% { transform:translateY(0); }
+    30% { transform:translateY(-5px); }
+  }
+
+  /* Options */
+  .options-row {
+    display:flex; flex-direction:column; gap:7px;
+    margin-top:3px; animation:fadeUp 0.3s ease; padding-left:39px;
+  }
+  .opt-btn {
+    background:var(--surface); border:1.5px solid var(--border);
+    border-radius:var(--radius-sm); padding:10px 15px;
+    font-family:'DM Sans',sans-serif; font-size:13px;
+    color:var(--text); cursor:pointer; text-align:left;
+    transition:all 0.16s ease; display:flex; align-items:flex-start;
+    gap:9px; line-height:1.45;
+  }
+  .opt-btn:hover {
+    border-color:var(--accent); background:var(--accent-light);
+    color:var(--accent); transform:translateX(3px);
+  }
+  .opt-icon { font-size:15px; flex-shrink:0; margin-top:1px; }
+
+  /* Input */
+  .input-area {
+    padding:13px 18px; background:var(--surface);
+    border-top:1px solid var(--border);
+    display:flex; gap:9px; align-items:flex-end; flex-shrink:0;
+  }
+  .input-area textarea {
+    flex:1; border:1.5px solid var(--border); border-radius:var(--radius-sm);
+    padding:9px 13px; font-family:'DM Sans',sans-serif; font-size:13.5px;
+    color:var(--text); resize:none; outline:none; background:var(--surface2);
+    min-height:40px; max-height:100px; line-height:1.5; transition:border-color 0.2s;
+  }
+  .input-area textarea:focus { border-color:var(--accent); }
+  .input-area textarea::placeholder { color:var(--text-muted); }
+  .send-btn {
+    width:40px; height:40px; background:var(--accent); border:none;
+    border-radius:var(--radius-sm); cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    flex-shrink:0; transition:background 0.2s,transform 0.1s; color:#fff;
+  }
+  .send-btn:hover { background:var(--accent-dark); }
+  .send-btn:active { transform:scale(0.94); }
+  .send-btn svg { width:17px; height:17px; }
+  .restart-btn {
+    background:none; border:none; color:var(--text-muted); cursor:pointer;
+    font-family:'DM Sans',sans-serif; font-size:11.5px;
+    padding:4px 7px; border-radius:6px;
+    display:flex; align-items:center; gap:3px;
+    transition:color 0.2s; flex-shrink:0;
+  }
+  .restart-btn:hover { color:var(--accent); }
+</style>
+</head>
+<body>
+<div class="app-shell">
+  <div class="header">
+    <div class="header-avatar">🏦</div>
+    <div class="header-info">
+      <h1>Asistente BackCaja</h1>
+      <p>Te oriento en tu solicitud paso a paso</p>
+    </div>
+    <div class="header-badge">Tesorería</div>
+  </div>
+  <div class="chat-area" id="chatArea"></div>
+  <div class="input-area">
+    <button class="restart-btn" onclick="restartChat()">↺ Reiniciar</button>
+    <textarea id="userInput" placeholder="Escribe tu consulta aquí..." rows="1"
+      onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+    <button class="send-btn" onclick="sendMessage()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+        stroke-linecap="round" stroke-linejoin="round">
+        <line x1="22" y1="2" x2="11" y2="13"></line>
+        <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+      </svg>
+    </button>
+  </div>
+</div>
+
+<script>
+const FORM_URL = "https://forms.office.com/r/mNiTLFavxd";
+
+// ─── ÁRBOL DE DECISIÓN ────────────────────────────────────────────────────────
+// Cada nodo: { msg, options }  |  hoja: { msg, result, tips, warning }
+const TREE = {
+
+  start: {
+    msg: `¡Hola! 👋 Soy el <strong>Asistente de BackCaja</strong>.<br><br>
+Estoy aquí para orientarte en qué opción seleccionar en el formulario de solicitudes y qué datos debes incluir para que tu caso se resuelva más rápido.<br><br>
+<strong>¿Cuál es la situación que estás viviendo hoy?</strong>
+<div class="horario-chip">🕐 Atención Lun–Jue 08:30–18:00 · Vie 08:30–14:00</div>`,
+    options: [
+      { icon:"📄", label:"Tengo un problema con un bono (emisión, anulación, reimpresión)", next:"bono" },
+      { icon:"💰", label:"Tengo un problema con una planilla de cotización", next:"planilla" },
+      { icon:"🖥️", label:"Necesito gestionar mi caja (asignación cajero/voucher, acceso, creación de cajero)", next:"asignacion" },
+      { icon:"💳", label:"Necesito anular o devolver un pago con tarjeta (Transbank)", next:"transbank" },
+      { icon:"🔄", label:"Necesito cambiar la forma de pago o anular una transacción", next:"camb_estado" },
+      { icon:"🔒", label:"Necesito cerrar, abrir o arquear mi caja", next:"cierre" },
+      { icon:"📅", label:"Necesito prorrogar o rescatar un cheque a fecha", next:"cheques" },
+      { icon:"💬", label:"Tengo una consulta o necesito orientación de un especialista", next:"orientacion" },
+      { icon:"⚠️", label:"Tengo un error o incidente que no encaja en ninguna opción anterior", next:"incidentes" },
+    ]
+  },
+
+  // ── BONOS ────────────────────────────────────────────────────────────────────
+  bono: {
+    msg: "Entendido. ¿Qué te ocurrió exactamente con el bono?",
+    options: [
+      { icon:"❌", label:"El bono quedó en estado ANU (Anulado) y necesito volver a emitirlo", next:"bono_anu" },
+      { icon:"🖨️", label:"Necesito reimprimir un bono, CIC u otro comprobante", next:"r_d02_bono" },
+      { icon:"💳", label:"El bono fue pagado dos veces (duplicado)", next:"r_e01" },
+      { icon:"🔄", label:"Necesito anular, revertir o cambiar la forma de pago del bono", next:"bono_anular" },
+      { icon:"❓", label:"Otro problema con el bono", next:"r_f03_bono" },
+    ]
+  },
+
+  bono_anu: {
+    msg: `Cuando un bono queda en estado <strong>ANU (Anulado)</strong>, para poder volver a emitirlo el cajero debe solicitar que lo dejen en fila nuevamente.<br><br>
+¿El bono ANU es de tu misma sucursal o de otra sucursal?`,
+    options: [
+      { icon:"🏢", label:"Es de mi misma sucursal", next:"r_a03_bono" },
+      { icon:"🏢", label:"Es de otra sucursal o no estoy seguro/a", next:"r_a03_bono" },
+    ]
+  },
+
+  r_a03_bono: {
+    msg: "Identificado. Debes solicitar que dejen el folio en fila para poder volver a emitirlo.",
+    result: { cat:"Asignación (Caja o Voucher) y Gestión de Fila", code:"A03", sub:"Dejar en Fila" },
+    tips: ["Nombre y código de la sucursal", "Número de caja", "Folio del bono que quedó ANU", "Fecha de la transacción", "Comentario: indicar que el bono quedó en estado ANU y que necesitas volver a emitirlo"]
+  },
+
+  r_d02_bono: {
+    msg: "Para reimprimir un bono, CIC u otro comprobante, corresponde esta opción:",
+    result: { cat:"Detención de pagos y reimpresiones", code:"D02", sub:"Reimprimir Comprobante, CIC, Bono, etc." },
+    tips: ["Nombre y código de la sucursal", "Número de caja", "Número de folio del documento a reimprimir", "Fecha de la transacción", "Tipo de documento (bono, CIC, comprobante, etc.)"]
+  },
+
+  r_e01: {
+    msg: "Para el caso de bonos duplicados, corresponde reportarlo como incidente:",
+    result: { cat:"Incidentes/Errores", code:"E01", sub:"Incidente: Duplicidad de bono" },
+    tips: ["Nombre y código de la sucursal", "Número de caja", "Folio del bono duplicado", "Fecha de la transacción", "Comentario: indicar ambos folios si los tienes identificados"]
+  },
+
+  bono_anular: {
+    msg: "¿Qué acción necesitas realizar sobre el bono?",
+    options: [
+      { icon:"↩️", label:"Anular, revertir o devolver la transacción completamente", next:"r_b01" },
+      { icon:"🔄", label:"Cambiar la forma de pago (ej: de efectivo a depósito u otro)", next:"r_b02" },
+    ]
+  },
+
+  r_f03_bono: {
+    msg: "Si tu problema con el bono no encaja en las opciones anteriores, puedes solicitar orientación de un especialista:",
+    result: { cat:"Orientación y soporte (Atención de Especialistas)", code:"F03", sub:"Orientación y soporte (Atención de Especialistas)" },
+    tips: ["Nombre y código de la sucursal", "Número de caja", "Folio del bono afectado", "Fecha de la transacción", "Comentario: describe detalladamente qué ocurrió con el bono"]
+  },
+
+  // ── PLANILLAS ────────────────────────────────────────────────────────────────
+  planilla: {
+    msg: "¿Cuál es el problema con la planilla?",
+    options: [
+      { icon:"❌", label:"La planilla quedó en estado ANU (Anulada) y necesito volver a procesarla", next:"planilla_anu" },
+      { icon:"💰", label:"Necesito pagar una planilla (asociar transacción WebPay)", next:"r_g02" },
+      { icon:"🗑️", label:"Necesito eliminar una planilla de cotización", next:"r_g01" },
+      { icon:"❓", label:"Otro problema con la planilla", next:"r_f03_planilla" },
+    ]
+  },
+
+  planilla_anu: {
+    msg: `Cuando una planilla queda en estado <strong>ANU (Anulada)</strong>, se debe solicitar su eliminación antes de poder volver a generarla.<br><br>
+La opción correcta es <strong>G01 - Eliminar planilla cotización</strong>.`,
+    result: { cat:"Planillas de cotización", code:"G01", sub:"Eliminar planilla cotización" },
+    tips: ["Nombre y código de la sucursal", "Número de caja", "Número de folio de la planilla que quedó ANU", "Fecha de la transacción", "Comentario: indicar que la planilla quedó en estado ANU y que necesitas eliminarla para volver a generarla"]
+  },
+
+  r_g02: {
+    msg: "Para pagar una planilla y asociar la transacción WebPay:",
+    result: { cat:"Planillas de cotización", code:"G02", sub:"Pagar Planilla" },
+    tips: ["ID de transacción WebPay (WP)", "Número de folio de la planilla", "Nombre y código de la sucursal", "Número de caja", "Comentario: indicar el folio de la planilla a pagar"]
+  },
+
+  r_g01: {
+    msg: "Para eliminar una planilla de cotización:",
+    result: { cat:"Planillas de cotización", code:"G01", sub:"Eliminar planilla cotización" },
+    tips: ["Nombre y código de la sucursal", "Número de caja", "Número de folio de la planilla a eliminar", "Fecha de la transacción", "Comentario: indicar el motivo de la eliminación"]
+  },
+
+  r_f03_planilla: {
+    msg: "Si tu problema con la planilla no encaja en las opciones anteriores:",
+    result: { cat:"Orientación y soporte (Atención de Especialistas)", code:"F03", sub:"Orientación y soporte (Atención de Especialistas)" },
+    tips: ["Nombre y código de la sucursal", "Número de caja", "Folio de la planilla afectada", "Fecha de la transacción", "Comentario: describe detalladamente qué ocurrió con la planilla"]
+  },
+
+  // ── ASIGNACIÓN / CAJA ────────────────────────────────────────────────────────
+  asignacion: {
+    msg: "¿Qué necesitas hacer con tu caja?",
+    options: [
+      { icon:"🖥️", label:"Necesito que me asignen a una caja (cambio de caja)", next:"r_a01" },
+      { icon:"💳", label:"Necesito asignar o asociar un voucher de tarjeta TC/TD", next:"r_a02" },
+      { icon:"⏸️", label:"Necesito quedar en fila (un folio en espera)", next:"r_a03_gen" },
+      { icon:"❌", label:"Necesito eliminar un folio de la fila", next:"r_a04" },
+      { icon:"👤", label:"Necesito crear un nuevo cajero en el sistema", next:"r_a05" },
+    ]
+  },
+
+  r_a01: {
+    msg: "Para solicitar un cambio o asignación de caja:",
+    result: { cat:"Asignación (Caja o Voucher) y Gestión de Fila", code:"A01", sub:"Asignar Caja" },
+    tips: ["Nombre y código de la sucursal actual", "Número de caja actual", "Nombre y código de la sucursal nueva (si aplica)", "Número de caja nueva", "RUT del cajero a cambiar"]
+  },
+
+  r_a02: {
+    msg: "Para asignar o asociar un voucher de tarjeta TC/TD:",
+    result: { cat:"Asignación (Caja o Voucher) y Gestión de Fila", code:"A02", sub:"Asignar/Asociar voucher tarjeta TC-TD" },
+    tips: ["Nombre y código de la sucursal", "Número de caja", "Fecha de la transacción", "Folio del documento", "Folio boleta (voucher)", "Comentario: describir qué pago se realizó y qué debe asociarse", "Adjuntar imagen del voucher si es posible"]
+  },
+
+  r_a03_gen: {
+    msg: "Para dejar un folio en fila:",
+    result: { cat:"Asignación (Caja o Voucher) y Gestión de Fila", code:"A03", sub:"Dejar en Fila" },
+    tips: ["Nombre y código de la sucursal", "Número de caja", "Folio del documento a dejar en fila", "Fecha de la transacción", "Comentario: indicar el motivo por el que debe quedar en fila"]
+  },
+
+  r_a04: {
+    msg: "Para eliminar un folio de la fila:",
+    result: { cat:"Asignación (Caja o Voucher) y Gestión de Fila", code:"A04", sub:"Eliminar de fila" },
+    tips: ["Nombre y código de la sucursal", "Número de caja", "Folio del documento a eliminar de la fila", "Fecha de la transacción"]
+  },
+
+  r_a05: {
+    msg: "Para crear un nuevo cajero en el sistema:",
+    result: { cat:"Asignación (Caja o Voucher) y Gestión de Fila", code:"A05", sub:"Crear Cajero" },
+    tips: ["Nombre y código de la sucursal", "Número de caja asignada", "RUT del nuevo cajero", "Fecha de nacimiento del cajero", "Comentario: indicar si realizará funciones de cajero o de gestor"]
+  },
+
+  // ── TRANSBANK ────────────────────────────────────────────────────────────────
+  transbank: {
+    msg: "¿Qué tipo de operación Transbank necesitas gestionar?",
+    options: [
+      { icon:"💳", label:"Anular un pago realizado con Tarjeta de Crédito", next:"r_h01" },
+      { icon:"💳", label:"Devolver un pago realizado con Tarjeta de Débito", next:"r_h02" },
+    ]
+  },
+
+  r_h01: {
+    msg: "Para anular un pago con Tarjeta de Crédito Transbank:",
+    result: { cat:"Anulación TC - Devolución TD [Transbank]", code:"H01", sub:"Anulación Tarjeta de Crédito" },
+    tips: ["Nombre y código de la sucursal", "Número de caja", "Fecha de la transacción", "Monto del afiliado a anular o devolver", "Comentario: describir el motivo de la anulación"],
+    warning: "Esta solicitud tiene un flujo de aprobación especial. Será revisada por los aprobadores correspondientes antes de ejecutarse."
+  },
+
+  r_h02: {
+    msg: "Para devolver un pago con Tarjeta de Débito Transbank:",
+    result: { cat:"Anulación TC - Devolución TD [Transbank]", code:"H02", sub:"Devolución Tarjeta de Débito" },
+    tips: ["Nombre y código de la sucursal", "Número de caja", "Fecha de la transacción", "Monto del afiliado a devolver", "Comentario: describir el motivo de la devolución"],
+    warning: "Esta solicitud tiene un flujo de aprobación especial. Será revisada por los aprobadores correspondientes antes de ejecutarse."
+  },
+
+  // ── CAMBIO FORMA DE PAGO ─────────────────────────────────────────────────────
+  camb_estado: {
+    msg: "¿Qué acción necesitas realizar sobre la transacción?",
+    options: [
+      { icon:"↩️", label:"Anular, revertir o devolver una transacción ya procesada", next:"r_b01" },
+      { icon:"🔄", label:"Cambiar la forma de pago (Camb Estado)", next:"r_b02" },
+      { icon:"🏢", label:"Cambiar el reembolso a empresa", next:"r_b03" },
+    ]
+  },
+
+  r_b01: {
+    msg: "Para anular, revertir o devolver una transacción:",
+    result: { cat:"Cambio forma de pago (Camb Estado) y Anulaciones/Reversas", code:"B01", sub:"Anulación/Reversa/Devolución Transacción" },
+    tips: ["Nombre y código de la sucursal", "Número de caja", "Folio del documento afectado", "Fecha de la transacción", "Comentario: describir qué transacción debe revertirse y el motivo"]
+  },
+
+  r_b02: {
+    msg: "Para cambiar la forma de pago de una transacción:",
+    result: { cat:"Cambio forma de pago (Camb Estado) y Anulaciones/Reversas", code:"B02", sub:"Cambio forma de pago (Camb Estado)" },
+    tips: ["Nombre y código de la sucursal", "Folio del documento a modificar", "Descripción de la transacción actual", "Nueva forma de pago requerida (ej: de efectivo a depósito)", "Comentario: explicar el motivo del cambio"]
+  },
+
+  r_b03: {
+    msg: "Para cambiar el reembolso a empresa:",
+    result: { cat:"Cambio forma de pago (Camb Estado) y Anulaciones/Reversas", code:"B03", sub:"Cambio reembolso empresa" },
+    tips: ["Nombre y código de la sucursal", "RUT de la empresa", "RUT del cajero emisor", "Comentario: describir qué reembolso debe modificarse"]
+  },
+
+  // ── CIERRE / ARQUEO ──────────────────────────────────────────────────────────
+  cierre: {
+    msg: "¿Qué gestión de caja necesitas?",
+    options: [
+      { icon:"📊", label:"Realizar un arqueo de caja", next:"r_c01" },
+      { icon:"🔒", label:"Cerrar o abrir mi caja", next:"r_c02" },
+    ]
+  },
+
+  r_c01: {
+    msg: "Para solicitar un arqueo de caja:",
+    result: { cat:"Cierre/Abrir/Arqueo de caja", code:"C01", sub:"Arqueo Caja" },
+    tips: ["Nombre y código de la sucursal", "Número de caja", "Fecha de la transacción", "Comentario: describir el motivo del arqueo o el problema encontrado"]
+  },
+
+  r_c02: {
+    msg: "Para solicitar cierre o apertura de caja:",
+    result: { cat:"Cierre/Abrir/Arqueo de caja", code:"C02", sub:"Cerrar/Abrir Caja" },
+    tips: ["Nombre y código de la sucursal", "Número de caja", "Fecha de la transacción", "Motivo del cierre de caja pendiente", "Comentario: indicar si necesitas abrir o cerrar la caja y el motivo"]
+  },
+
+  // ── CHEQUES ──────────────────────────────────────────────────────────────────
+  cheques: {
+    msg: "¿Qué necesitas hacer con el cheque a fecha?",
+    options: [
+      { icon:"📅", label:"Prorrogar un cheque (extender su fecha de vencimiento)", next:"r_i01" },
+      { icon:"💵", label:"Rescatar un cheque (cobrar antes del vencimiento)", next:"r_i02" },
+    ]
+  },
+
+  r_i01: {
+    msg: "Para solicitar una prórroga de cheque a fecha:",
+    result: { cat:"Prórroga y Rescate de cheques a fecha", code:"I01", sub:"Prórroga de cheques a fecha" },
+    tips: ["Nombre y código de la sucursal", "Número de caja", "Folio del cheque a prorrogar", "Fecha de vencimiento del cheque", "Comentario: indicar la nueva fecha propuesta y el motivo"],
+    warning: `<strong>Requisitos obligatorios antes de subir el ticket:</strong><br>
+• La solicitud debe hacerse con al menos <strong>48 horas antes del vencimiento</strong>.<br>
+• El cliente <strong>no debe tener protestos</strong> pendientes.<br>
+• Cheques de <strong>Cotizaciones</strong> → requiere autorización del <strong>Supervisor de Cobranzas</strong>.<br>
+• Cheques <strong>PAM</strong> → requiere autorización del <strong>Jefe de Oficina</strong>.`
+  },
+
+  r_i02: {
+    msg: "Para solicitar el rescate de un cheque a fecha:",
+    result: { cat:"Prórroga y Rescate de cheques a fecha", code:"I02", sub:"Rescate cheques a fecha" },
+    tips: ["Nombre y código de la sucursal", "Número de caja", "Folio del cheque a rescatar", "Fecha de vencimiento del cheque", "Comentario: indicar el motivo del rescate anticipado"],
+    warning: `<strong>Requisitos obligatorios antes de subir el ticket:</strong><br>
+• La solicitud debe hacerse con al menos <strong>48 horas antes del vencimiento</strong>.<br>
+• El cliente <strong>no debe tener protestos</strong> pendientes.<br>
+• Cheques de <strong>Cotizaciones</strong> → requiere autorización del <strong>Supervisor de Cobranzas</strong>.<br>
+• Cheques <strong>PAM</strong> → requiere autorización del <strong>Jefe de Oficina</strong>.`
+  },
+
+  // ── ORIENTACIÓN ──────────────────────────────────────────────────────────────
+  orientacion: {
+    msg: "¿Sobre qué necesitas orientación o consulta?",
+    options: [
+      { icon:"👤", label:"Consulta o requerimiento de pago de un afiliado o beneficiario", next:"r_f02" },
+      { icon:"💬", label:"Orientación general, error del sistema u otro que no sé clasificar", next:"r_f03_gen" },
+    ]
+  },
+
+  r_f02: {
+    msg: "Para consultas o requerimientos de pago de afiliados o beneficiarios:",
+    result: { cat:"Orientación y soporte (Atención de Especialistas)", code:"F02", sub:"Consulta/Requerimiento pago Afiliado/Beneficiario" },
+    tips: ["Nombre y código de la sucursal", "Número de caja (si aplica)", "Folio del documento relacionado (si aplica)", "Comentario: describir detalladamente la consulta o el requerimiento del afiliado/beneficiario"]
+  },
+
+  r_f03_gen: {
+    msg: "Para orientación general o situaciones que no sabes cómo clasificar:",
+    result: { cat:"Orientación y soporte (Atención de Especialistas)", code:"F03", sub:"Orientación y soporte (Atención de Especialistas)" },
+    tips: ["Nombre y código de la sucursal", "Número de caja", "Folio relacionado (si aplica)", "Comentario: describir con el mayor detalle posible qué ocurrió, qué mensaje de error apareció (si hubo) y qué acción estabas realizando"]
+  },
+
+  // ── INCIDENTES ───────────────────────────────────────────────────────────────
+  incidentes: {
+    msg: "¿Qué tipo de error o incidente es?",
+    options: [
+      { icon:"⚠️", label:"Error al procesar múltiples pagos al mismo tiempo", next:"r_e03" },
+      { icon:"⏸️", label:"Necesito detener un pago que está en proceso", next:"r_d01" },
+      { icon:"🔧", label:"Otro error o incidente no listado en las opciones anteriores", next:"r_e02" },
+    ]
+  },
+
+  r_e03: {
+    msg: "Para errores en pagos múltiples:",
+    result: { cat:"Incidentes/Errores", code:"E03", sub:"Error pagos múltiples" },
+    tips: ["Nombre y código de la sucursal", "Número de caja", "RUT del afiliado", "Monto afectado", "Medio de pago utilizado", "Fecha de la transacción", "Comentario: describir qué pasó con los pagos múltiples y adjuntar el CIC si lo tienes"]
+  },
+
+  r_d01: {
+    msg: "Para detener un pago que está en proceso:",
+    result: { cat:"Detención de pagos y reimpresiones", code:"D01", sub:"Detención de pagos" },
+    tips: ["Nombre y código de la sucursal", "Número de caja", "Folio del documento a detener", "Folio boleta (voucher) si aplica", "Comentario: indicar por qué debe detenerse el pago (ej: afiliado en lista de posibles fraudes, error de monto, etc.)"]
+  },
+
+  r_e02: {
+    msg: "Para incidentes varios o errores que no encajan en otra categoría:",
+    result: { cat:"Incidentes/Errores", code:"E02", sub:"Incidentes Varios" },
+    tips: ["Nombre y código de la sucursal", "Número de caja", "Folio relacionado (si aplica)", "Fecha de la transacción", "Comentario: describir con todo el detalle posible qué ocurrió. El equipo BackCaja analizará tu caso y te orientará si corresponde a otra categoría"]
+  },
+};
+
+// ─── MOTOR ────────────────────────────────────────────────────────────────────
+let currentNode = "start";
+
+function goTo(nodeId) {
+  currentNode = nodeId;
+  const node = TREE[nodeId];
+  if (!node) return;
+  showTyping();
+  setTimeout(() => {
+    removeTyping();
+    if (node.result) {
+      showResult(node);
+    } else {
+      addBotMessage(node.msg);
+      showOptions(node.options);
+    }
+  }, 380);
+}
+
+function showResult(node) {
+  const { cat, code, sub } = node.result;
+  const tips    = node.tips    || null;
+  const warning = node.warning || null;
+
+  let html = `${node.msg}
+<div class="result-card">
+  <div class="rc-label">✅ Categoría identificada</div>
+  <div class="rc-cat">${cat}</div>
+  <div class="rc-sub" style="margin-top:4px"><span class="rc-code">${code}</span>${sub}</div>
+</div>`;
+
+  if (warning) html += `<div class="warning-box">⚠️ ${warning}</div>`;
+
+  if (tips && tips.length) {
+    html += `<div class="data-tips">
+      <strong>📋 Datos clave que debes incluir en el ticket:</strong>
+      <ul>${tips.map(t=>`<li>${t}</li>`).join('')}</ul>
+    </div>`;
+  }
+
+  html += `<br>En el formulario selecciona:<br>
+  <strong>1.</strong> Problemática → <em>${cat}</em><br>
+  <strong>2.</strong> Sub-opción → <em><span style="font-family:'DM Mono',monospace;color:var(--accent)">${code}</span> – ${sub}</em>`;
+
+  addBotMessage(html);
+
+  // Botón al formulario
+  setTimeout(() => {
+    const chat = document.getElementById('chatArea');
+    const row = document.createElement('div');
+    row.className = 'msg-row bot';
+    row.style.paddingLeft = '39px';
+    row.innerHTML = `<a href="${FORM_URL}" target="_blank" class="cta-btn">📋 Ir al formulario de solicitud</a>`;
+    chat.appendChild(row);
+    scrollBottom();
+  }, 80);
+
+  setTimeout(() => {
+    showOptions([
+      { icon:"🔄", label:"Tengo otra solicitud diferente", next:"start" },
+      { icon:"❓", label:"No estoy seguro/a, necesito más ayuda", next:"r_f03_gen" },
+    ]);
+  }, 150);
+}
+
+// ─── UI ───────────────────────────────────────────────────────────────────────
+function addBotMessage(html) {
+  const chat = document.getElementById('chatArea');
+  const row = document.createElement('div');
+  row.className = 'msg-row bot';
+  row.innerHTML = `<div class="bot-icon">🤖</div><div class="bubble bot">${html}</div>`;
+  chat.appendChild(row);
+  scrollBottom();
+}
+
+function addUserMessage(text) {
+  const chat = document.getElementById('chatArea');
+  const row = document.createElement('div');
+  row.className = 'msg-row user';
+  row.innerHTML = `<div class="bubble user">${escapeHtml(text)}</div>`;
+  chat.appendChild(row);
+  scrollBottom();
+}
+
+function showTyping() {
+  const chat = document.getElementById('chatArea');
+  const el = document.createElement('div');
+  el.className = 'typing-indicator'; el.id = 'typingIndicator';
+  el.innerHTML = `<div class="bot-icon">🤖</div>
+    <div class="typing-dots"><span></span><span></span><span></span></div>`;
+  chat.appendChild(el); scrollBottom();
+}
+
+function removeTyping() {
+  const el = document.getElementById('typingIndicator');
+  if (el) el.remove();
+}
+
+function showOptions(options) {
+  const chat = document.getElementById('chatArea');
+  const container = document.createElement('div');
+  container.className = 'options-row';
+  container.id = 'optionsContainer';
+  options.forEach(opt => {
+    const btn = document.createElement('button');
+    btn.className = 'opt-btn';
+    btn.innerHTML = `<span class="opt-icon">${opt.icon}</span>${opt.label}`;
+    btn.onclick = () => {
+      container.remove();
+      addUserMessage(opt.label);
+      goTo(opt.next);
+    };
+    container.appendChild(btn);
+  });
+  chat.appendChild(container); scrollBottom();
+}
+
+function removeOptions() {
+  const el = document.getElementById('optionsContainer');
+  if (el) el.remove();
+}
+
+// Búsqueda por texto libre
+function findNodeByText(text) {
+  const t = text.toLowerCase();
+  const map = [
+    { keys:["bono","folio","anu","emiti","reimprimir","cic","duplicad"], node:"bono" },
+    { keys:["planilla","cotizaci"], node:"planilla" },
+    { keys:["asign","caja","voucher","fila","cajero","crear","acceso"], node:"asignacion" },
+    { keys:["transbank","crédito","credito","débito","debito"], node:"transbank" },
+    { keys:["cambio","forma de pago","reversa","reembolso","estado"], node:"camb_estado" },
+    { keys:["cierre","cerrar","abrir","arqueo"], node:"cierre" },
+    { keys:["cheque","prórroga","prorroga","rescate","fecha"], node:"cheques" },
+    { keys:["orientaci","consulta","afiliado","beneficiario"], node:"orientacion" },
+    { keys:["error","incidente","múltiple","multiple","detenci"], node:"incidentes" },
+  ];
+  for (const { keys, node } of map) {
+    if (keys.some(k => t.includes(k))) return node;
+  }
+  return null;
+}
+
+function sendMessage() {
+  const input = document.getElementById('userInput');
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = ''; autoResize(input);
+  removeOptions();
+  addUserMessage(text);
+  const node = findNodeByText(text);
+  if (node) {
+    goTo(node);
+  } else {
+    showTyping();
+    setTimeout(() => {
+      removeTyping();
+      addBotMessage("No pude identificar tu consulta automáticamente. Selecciona la opción que más se acerca a tu situación:");
+      showOptions(TREE.start.options);
+    }, 400);
+  }
+}
+
+function handleKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+}
+
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 100) + 'px';
+}
+
+function restartChat() {
+  document.getElementById('chatArea').innerHTML = '';
+  currentNode = 'start';
+  goTo('start');
+}
+
+function scrollBottom() {
+  const chat = document.getElementById('chatArea');
+  setTimeout(() => { chat.scrollTop = chat.scrollHeight; }, 60);
+}
+
+function escapeHtml(text) {
+  return text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// Arrancar
+goTo('start');
+</script>
+</body>
+</html>
